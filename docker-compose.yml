@@ -1,0 +1,81 @@
+services:
+  hermes-gateway:
+    build:
+      context: /opt/apps/hermes-agent
+    image: hermes-agent:openrouter-sandbox
+    container_name: hermes-openrouter-gateway
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_UID: ${HERMES_UID:-10000}
+      HERMES_GID: ${HERMES_GID:-10000}
+      PATH: /opt/hermes/.venv/bin:/opt/data/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    volumes:
+      - ./hermes-home:/opt/data
+      - ./workspace:/workspace
+      - ./selector:/selector:ro
+      - ./reports:/reports
+    working_dir: /workspace
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+        # Start the gateway immediately. The separate model-selector service owns
+        # live benchmark/apply selection so gateway startup is not delayed and
+        # does not revert a benchmark-selected model with static scoring.
+        exec hermes gateway run
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 210s
+
+  model-selector:
+    image: hermes-agent:openrouter-sandbox
+    container_name: hermes-openrouter-selector
+    restart: unless-stopped
+    depends_on:
+      - hermes-gateway
+    env_file:
+      - .env
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_UID: ${HERMES_UID:-10000}
+      HERMES_GID: ${HERMES_GID:-10000}
+    volumes:
+      - ./hermes-home:/opt/data
+      - ./selector:/selector:ro
+      - ./reports:/reports
+    command:
+      - bash
+      - -c
+      - |
+        while true; do
+          python3 /selector/openrouter_free_selector.py \
+            --config /opt/data/config.yaml \
+            --report /reports/model-selection.json \
+            --mode "$${SELECTOR_MODE:-apply}" \
+            --safety-buffer-hours "$${SELECTOR_SAFETY_BUFFER_HOURS:-12}" \
+            --min-context "$${SELECTOR_MIN_CONTEXT:-32768}" || true
+          sleep "$${SELECTOR_INTERVAL_SECONDS:-21600}"
+        done
+    security_opt:
+      - no-new-privileges:true
+
+  shell:
+    image: hermes-agent:openrouter-sandbox
+    profiles: ["manual"]
+    env_file:
+      - .env
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_UID: ${HERMES_UID:-10000}
+      HERMES_GID: ${HERMES_GID:-10000}
+    volumes:
+      - ./hermes-home:/opt/data
+      - ./workspace:/workspace
+      - ./selector:/selector:ro
+      - ./reports:/reports
+    working_dir: /workspace
+    command: ["bash"]

@@ -1,0 +1,54 @@
+model:
+  provider: openrouter
+  # The selector updates this value in apply mode.
+  default: nvidia/nemotron-3-super-120b-a12b:free
+  base_url: https://openrouter.ai/api/v1
+  api_key: ${OPENROUTER_API_KEY}
+
+agent:
+  max_turns: 50
+  tool_use_enforcement: true
+
+terminal:
+  backend: local
+  cwd: /workspace
+  timeout: 180
+
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+  provider: builtin
+
+compression:
+  enabled: true
+  threshold: 0.55
+  target_ratio: 0.25
+
+display:
+  show_cost: true
+  tool_progress: true
+
+tools:
+  enabled_toolsets:
+    - terminal
+    - file
+    - web
+    - browser
+    - skills
+    - session_search
+    - cronjob
+    - todo
+    - vision
+    - image_gen
+    - tts
+    - delegation
+
+gateway:
+  enabled: true
+  telegram:
+    enabled: true
+    bot_token: ${TELEGRAM_BOT_TOKEN}
+    allowed_users: ${TELEGRAM_ALLOWED_USERS}
+    home_channel: ${TELEGRAM_HOME_CHANNEL}
+    home_channel_name: ${TELEGRAM_HOME_CHANNEL_NAME}
+    home_channel_thread_id: ${TELEGRAM_HOME_CHANNEL_THREAD_ID}

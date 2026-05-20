@@ -1,0 +1,16 @@
+# Real credentials and local runtime state
+.env
+.env.*
+!.env.example
+
+# Persistent Hermes/container state
+hermes-home/
+data/
+reports/*.json
+reports/*.log
+reports/*.md
+
+# Temporary files
+__pycache__/
+*.pyc
+.DS_Store
